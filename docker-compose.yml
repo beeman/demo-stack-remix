@@ -1,4 +1,13 @@
 services:
+  app:
+    build: .
+    ports:
+      - "13000:3000"
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://demo-stack-remix:demo-stack-remix@postgres:5432/demo-stack-remix?schema=public
+    depends_on:
+      - postgres
   postgres:
     image: postgres:15-alpine
     ports:
