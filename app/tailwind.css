@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  html {
+    background-color: rgb(17 24 39);
+    color: rgb(249 250 251);
+  }
+}
