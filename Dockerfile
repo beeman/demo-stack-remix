@@ -1,6 +1,10 @@
-# base node image
+# Base image
 FROM node:20-bookworm-slim AS base
 
+# Set the working directory
+WORKDIR /workspace
+
+# Configure pnpm so it can be cached
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
@@ -8,50 +12,48 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 RUN corepack prepare pnpm@latest --activate
 
-# Install openssl for Prisma
-RUN apt-get update && apt-get install -y openssl sqlite3
+# Install openssl for Prisma. Add sqlite3 here if you need it.
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Install all node_modules, including dev dependencies
-FROM base AS deps
-
-WORKDIR /workspace
+# Setup development node_modules
+FROM base AS dev-deps
 
 ADD package.json pnpm-lock.yaml ./
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Setup production node_modules
-FROM base AS production-deps
-ENV NODE_ENV=production
+FROM base AS prod-deps
 
-WORKDIR /workspace
+ENV NODE_ENV=production
 
 ADD package.json pnpm-lock.yaml ./
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile --ignore-scripts
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile --ignore-scripts --no-optional
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install prisma
 
 # Build the app
 FROM base AS build
 
-WORKDIR /workspace
+# Get the node_modules from the dev-deps stage
+COPY --from=dev-deps /workspace/node_modules /workspace/node_modules
 
-COPY --from=deps /workspace/node_modules /workspace/node_modules
-
+# Add and generate the Prisma client
 ADD prisma prisma
 RUN pnpx prisma generate
 
+# Add the rest of the app
 ADD . .
+
+# Build the app
 RUN pnpm run build
 
-# Finally, build the production image with minimal footprint
+# Build the production image
 FROM base
 
-ENV NODE_ENV="production"
+ENV NODE_ENV=production
 
-WORKDIR /workspace
-
-COPY --from=production-deps /workspace/node_modules /workspace/node_modules
+COPY --from=prod-deps /workspace/node_modules /workspace/node_modules
 COPY --from=build /workspace/node_modules/.prisma /workspace/node_modules/.prisma
 
 COPY --from=build /workspace/build /workspace/build

@@ -1,5 +1,7 @@
 # Demo Stack - Remix
 
+Basic todo app with Remix, Prisma, and Postgres and a GitHub workflow to build and push a Docker image to ghcr.io.
+
 - 📖 [Remix docs](https://remix.run/docs)
 
 ## Development

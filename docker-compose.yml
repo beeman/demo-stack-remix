@@ -1,10 +1,10 @@
 services:
   app:
-    build: .
+    image: ghcr.io/beeman/demo-stack-remix:latest
     ports:
-      - "13000:3000"
+      - "13000:13000"
     environment:
-      PORT: 3000
+      PORT: 13000
       DATABASE_URL: postgresql://demo-stack-remix:demo-stack-remix@postgres:5432/demo-stack-remix?schema=public
     depends_on:
       - postgres
